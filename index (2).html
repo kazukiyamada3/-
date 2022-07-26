@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JS QR Code Reader</title>
+    <meta name="description" content="QR Code Reader" />
+    <script src="./jsQR.js"></script>
+    
+  </head>
+  <body>
+    
+    <div id="result" font-size="30px" style="position: absolute; top: 20%; right: 40%;"></div>
+
+    <div>
+      <div style="position:relative;">
+        <video style="position: absolute; z-index: -100;"></video>
+        <div id="overlay" style="position: absolute; border: 1px solid #F00;"></div>
+      </div> 
+    </div>
+
+
+
+    <script>
+      
+      const constraints = { 
+        audio: false, 
+        video: {
+          facingMode: 'environment', 
+          width: 500, 
+          height: 500, 
+      }};
+
+      const drawRect = (topLeft, bottomRight) => {
+        const { x: x1, y: y1 } = topLeft;
+        const { x: x2, y: y2 }= bottomRight;
+
+        const overlay = document.querySelector('#overlay');
+        overlay.style.left = `${x1}px`;
+        overlay.style.top =`${y1}px`;
+        overlay.style.width = `${x2 - x1}px`;
+        overlay.style.height =`${y2 - y1}px`;
+      };
+      var ID_OK=[];
+      var ID = 0;
+      var c = 0;
+      var v = 0;
+      var cope = 0;
+      var count = 1;
+      var ary = [
+        [],[]
+      ];
+
+      while(true ){
+
+        (async() => {
+          try {
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const video = document.querySelector('video');
+            video.srcObject = stream;
+            video.play();
+
+            const { width, height } = constraints.video;
+            const canvas = new OffscreenCanvas(width, height);
+            const context = canvas.getContext('2d');
+        
+            const timer = setInterval(() => {
+                context.drawImage(video, 0, 0, width, height);
+                const imageData = context.getImageData(0, 0, width, height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+                  console.log("s",ary[[0],[0]]);
+                  const date = new Date();
+                  const hour = date.getHours();
+                  const minutes = date.getMinutes();
+                  const seconds = date.getSeconds();
+                  const milliseconds = date.getMilliseconds();
+
+
+                  document.querySelector('#result').textContent = code.data;
+
+                  drawRect(code.location.topLeftCorner, code.location.bottomRightCorner); 
+
+                
+                  ID_OK.push(code.data);
+                  console.log(ID_OK);
+                  ID = ID + 1;
+
+                  if (ID >= 0){
+                    for (var i=0; i<ID-1; i=i+1){//ここにfor文で過去リストに入室の記録が残っているかを確認し重複していたら削除する文
+                      if (ID_OK[i] === ID_OK[ID-1]){
+                        var j = ID_OK[i];
+                        break;
+                      }
+                    }
+                  }
+
+
+                  if (ID >= 0){
+                    for (var i=0; i<ID-1; i=i+1){//ここにfor文で過去リストに入室の記録が残っているかを確認し重複していたら削除する文
+                      if (ID_OK[i] === ID_OK[ID-1]){
+                        console.log('退室');
+
+                        console.log(ary[[0],[0]]);
+                        ID_OK.splice(ID-1,1);
+                        ID_OK.splice(i,1);//過去の同じ情報の削除
+                        console.log(ID_OK)
+                        ID = ID - 2;
+
+                        console.log(ary[[0],[0]]);
+
+                        count = 0;
+                        console.log(count);
+                        break;
+                      }
+                    }
+                  }
+
+
+                  if(count == 0){
+                    for(var m=0; m<100 ; m=m+1){
+                      if(ary[[m],[0]] == j){
+
+                        ary[[m],[2]].push(hour,minutes);
+                      }
+                    }
+                  }
+
+                  if(count == 1){
+                    console.log('入室');
+                    ary[[v],[0]].push(ID_OK);
+                    ary[[v],[1]].push(hour,minutes,seconds);
+                  }
+
+                  v = v+1;
+
+                  for (var a = 0; a < v; a++){
+                    for (var j = 0; j < 3; j++){
+                      console.log("[" + a + "][" + j + "] = " + ary[[a],[j]]);//配列の各要素を出力
+                    }
+                  }
+
+                } else {
+                  document.querySelector('#result').textContent = '未入力';
+                }
+
+              }, 2000);
+          } catch(error) {
+            console.log('load error', error);
+          }
+
+
+        })();
+        {
+
+        }
+      }
+    </script>
+  </body>
+</html>
